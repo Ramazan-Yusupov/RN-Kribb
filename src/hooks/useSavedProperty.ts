@@ -15,18 +15,24 @@ export function useSavedProperty(propertyId: string, onUnsave?: () => void) {
       return;
     }
 
-    const { data, error } = await authSupabase
-      .from("saved_properties")
-      .select("id")
-      .eq("user_clerk_id", userId)
-      .eq("property_id", propertyId)
-      .maybeSingle();
-    if (error) {
-      console.error("Error checking saved property:", error);
-      return;
-    }
+    try {
+      const { data, error } = await authSupabase
+        .from("saved_properties")
+        .select("id")
+        .eq("user_clerk_id", userId)
+        .eq("property_id", propertyId)
+        .maybeSingle();
+      if (error) {
+        console.error("Error checking saved property:", error);
+        setIsSaved(false);
+        return;
+      }
 
-    setIsSaved(!!data);
+      setIsSaved(!!data);
+    } catch (error) {
+      console.error("Error checking saved property:", error);
+      setIsSaved(false);
+    }
   }, [authSupabase, propertyId, userId]);
 
   useEffect(() => {

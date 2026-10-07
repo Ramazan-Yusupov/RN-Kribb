@@ -20,6 +20,10 @@ export default function PropertyCard({
     onUnsave,
   );
 
+  const imageUri = Array.isArray(property.images)
+    ? property.images[0]
+    : undefined;
+
   return (
     <TouchableOpacity
       onPress={() => router.push(`/(root)/property/${property.id}`)}
@@ -35,7 +39,9 @@ export default function PropertyCard({
     >
       {/* Image */}
       <Image
-        source={{ uri: property.images[0] }}
+        source={
+          imageUri ? { uri: imageUri } : require("@/assets/images/kribb.png")
+        }
         className="w-28 h-28"
         resizeMode="cover"
       />
@@ -86,7 +92,10 @@ export default function PropertyCard({
       {/* Save Button */}
       {showSave && (
         <TouchableOpacity
-          onPress={toggleSave}
+          onPress={(event) => {
+            event.stopPropagation();
+            void toggleSave();
+          }}
           disabled={saveLoading}
           className="w-10 items-center pt-3"
         >

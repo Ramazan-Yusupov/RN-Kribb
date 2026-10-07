@@ -79,9 +79,6 @@ export default function CreatePropertyScreen() {
 
   // ─── Image Picker ──────────────────────────────────────────
   const handlePickImages = async () => {
-    const remainingSlots = Math.max(0, 6 - form.images.length);
-    if (remainingSlots === 0) return;
-
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
@@ -96,7 +93,7 @@ export default function CreatePropertyScreen() {
       allowsMultipleSelection: true,
       quality: 0.7,
       base64: true,
-      selectionLimit: remainingSlots,
+      selectionLimit: 6,
     });
 
     if (result.canceled) return;
@@ -106,7 +103,7 @@ export default function CreatePropertyScreen() {
     const uploadedUrls: string[] = [];
     const previewUris: string[] = [];
 
-    for (const asset of result.assets.slice(0, remainingSlots)) {
+    for (const asset of result.assets) {
       try {
         const filename = `property_${Date.now()}_${Math.random()
           .toString(36)
@@ -136,11 +133,10 @@ export default function CreatePropertyScreen() {
       }
     }
 
-    setForm((prev) => ({
-      ...prev,
-      images: [...prev.images, ...uploadedUrls],
-      localImages: [...prev.localImages, ...previewUris],
-    }));
+    updateForm({
+      images: [...form.images, ...uploadedUrls],
+      localImages: [...form.localImages, ...previewUris],
+    });
     setUploadingImages(false);
   };
 
@@ -172,7 +168,7 @@ export default function CreatePropertyScreen() {
         latitude: String(location.coords.latitude),
         longitude: String(location.coords.longitude),
       });
-    } catch {
+    } catch (err) {
       Alert.alert("Error", "Could not detect location. Enter manually.");
     } finally {
       setDetectingLocation(false);
@@ -203,62 +199,37 @@ export default function CreatePropertyScreen() {
     if (form.images.length === 0)
       return Alert.alert("Validation", "Please upload at least one image.");
 
-    const areaSqft = form.areaSqft.trim() ? Number(form.areaSqft) : null;
-    const latitude = form.latitude.trim() ? Number(form.latitude) : null;
-    const longitude = form.longitude.trim() ? Number(form.longitude) : null;
-
-    if (areaSqft !== null && !Number.isFinite(areaSqft)) {
-      return Alert.alert("Validation", "Area must be a valid number.");
-    }
-    if (latitude !== null && !Number.isFinite(latitude)) {
-      return Alert.alert("Validation", "Latitude must be a valid number.");
-    }
-    if (latitude !== null && (latitude < -90 || latitude > 90)) {
-      return Alert.alert("Validation", "Latitude must be between -90 and 90.");
-    }
-    if (longitude !== null && !Number.isFinite(longitude)) {
-      return Alert.alert("Validation", "Longitude must be a valid number.");
-    }
-    if (longitude !== null && (longitude < -180 || longitude > 180)) {
-      return Alert.alert(
-        "Validation",
-        "Longitude must be between -180 and 180.",
-      );
-    }
-
     setSubmitting(true);
 
-    try {
-      const { error } = await authSupabase.from("properties").insert({
-        title: form.title.trim(),
-        description: form.description.trim(),
-        price: priceNum,
-        type: form.type,
-        bedrooms: form.bedrooms,
-        bathrooms: form.bathrooms,
-        area_sqft: areaSqft,
-        address: form.address.trim(),
-        city: form.city.trim(),
-        latitude,
-        longitude,
-        images: form.images,
-        is_featured: form.isFeatured,
-        is_sold: false,
-      });
+    const { error } = await authSupabase.from("properties").insert({
+      title: form.title.trim(),
+      description: form.description.trim(),
+      price: priceNum,
+      type: form.type,
+      bedrooms: form.bedrooms,
+      bathrooms: form.bathrooms,
+      area_sqft: form.areaSqft ? Number(form.areaSqft) : null,
+      address: form.address.trim(),
+      city: form.city.trim(),
+      latitude: form.latitude ? Number(form.latitude) : null,
+      longitude: form.longitude ? Number(form.longitude) : null,
+      images: form.images,
+      is_featured: form.isFeatured,
+      is_sold: false,
+    });
 
-      if (error) {
-        Alert.alert("Error", "Failed to create property. Please try again.");
-        console.error(error);
-        return;
-      }
+    setSubmitting(false);
 
-      setForm(INITIAL_FORM);
-      Alert.alert("Success! 🎉", "Property listed successfully.", [
-        { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
-      ]);
-    } finally {
-      setSubmitting(false);
+    if (error) {
+      Alert.alert("Error", "Failed to create property. Please try again.");
+      console.error(error);
+      return;
     }
+
+    setForm(INITIAL_FORM);
+    Alert.alert("Success! 🎉", "Property listed successfully.", [
+      { text: "OK", onPress: () => router.replace("/(root)/(tabs)") },
+    ]);
   };
 
   // ─── UI Helpers ────────────────────────────────────────────
@@ -273,7 +244,7 @@ export default function CreatePropertyScreen() {
   }) => (
     <View className="flex-1">
       <Text className={labelClass}>{label}</Text>
-      <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <View className="flex-row items-center  border border-gray-200 rounded-2xl overflow-hidden">
         <TouchableOpacity
           onPress={() => onChange(Math.max(1, value - 1))}
           className="w-11 h-11 items-center justify-center"
@@ -333,7 +304,7 @@ export default function CreatePropertyScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -441,7 +412,7 @@ export default function CreatePropertyScreen() {
               keyboardType="numeric"
             />
             <Text className="text-xs text-gray-400 mt-1.5 ml-1">
-              Valid range: $1 – ${MAX_PRICE.toLocaleString("en-US")}
+              Valid range: $1 – ${MAX_PRICE.toLocaleString("en-IN")}
             </Text>
           </View>
 

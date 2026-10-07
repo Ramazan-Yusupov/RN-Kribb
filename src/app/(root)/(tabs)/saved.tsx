@@ -45,10 +45,12 @@ export default function SavedScreen() {
 
       if (error) {
         console.error("Error fetching saved properties:", error);
+        setSaved([]);
         return;
       }
 
-      setSaved((data as unknown as SavedProperty[]) ?? []);
+      const rows = (data ?? []) as unknown as SavedProperty[];
+      setSaved(rows.filter((item) => item?.properties));
     } catch (error) {
       console.error("Error fetching saved properties:", error);
     } finally {
